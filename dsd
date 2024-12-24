@@ -1,0 +1,2 @@
+Okay, so as you all know that passwords are very easy to hack these days, so i'm building a very complex password hasher tool which will protect your password from being hacked or stolen by 100%. so lemme just quickly demonstrate you how it works, so as you can see that when i ran the code, it salted and hashed my password - Shaurya6 and now i can use this hash to log onto any platfrom and it will be impossible for any unauthorised entity to access it.
+It will be ready in a few days, stay tuned!
