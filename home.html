@@ -1,95 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@100;400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="Style/body2.css">
-    <title>ASTRIQUES</title>
-    <style>
-        body {
-            font-family: 'Archivo', sans-serif;
-        }
-
-        .button {
-            background-color: #006eff;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #006eff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+    <title>File Sharing App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-    <div class="eeeep" id="body">
-        <div class="head">
-            <div class="center" style="display: flex;">
-                <img src="Image.png" alt=""> ASTRIQUES
-            </div>
-        </div>
-        <div class="main">
-            <div class="text">Create a new Key</div>
-            <button class="button" onclick="create()">Create</button>
-        </div>
-        <div class="main">
-            <div class="text">Unhash Key</div>
-            <button class="button" onclick="unhashDialog()">Unhash</button>
-        </div>
-        <div class="main2" align="center">
-            <div class="history-section">
-                <h3>Shared History</h3>
-                <div id="shared-history">
-                    <i class='bx bx-history' style="font-size: 200px;text-align: center;"></i>
-                    <h1 class="ss">You haven't shared any keys yet!</h1>
-                </div>
-            </div>
-            <div class="history-section">
-                <h3>Received History</h3>
-                <div id="received-history">
-                    <i class='bx bx-history' style="font-size: 200px;text-align: center;"></i>
-                    <h1 class="ss">You haven't received any keys yet!</h1>
-                </div>
-            </div>
-        </div>
-        <dialog id="popup" align="center"></dialog>
-    </div>
-    <script src="JS/home.js"></script>
-</body>
 
-    </html>
-    
+    <div class="head">
+        <img src="logo.png" alt="Logo">
+        <div>File Sharing App</div>
+    </div>
+
+    <div class="main">
+        <div class="wrap">
+            <button id="createBtn">Create Share Code</button>
+            <button id="receiveBtn">Receive Share Code</button>
+        </div>
+
+        <div id="history" class="main2">
+            <h3>History</h3>
+            <div id="history-content"></div>
+        </div>
+    </div>
+
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <h2 id="msg"></h2>
+            <input type="text" id="shareCode" placeholder="Enter Share Code">
+            <div class="load" id="loading" style="display:none;"></div>
+            <button id="submitBtn">Submit</button>
+        </div>
+    </div>
+
+    <div id="dialogBox" class="dialogBox">
+        <div class="dialog-content">
+            <span id="dialogMsg"></span>
+            <button id="dialogCloseBtn">Close</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
