@@ -3,45 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Sharing App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Style/body2.css">
+    <title>ASTRIQUES</title>
 </head>
 <body>
 
+<div class="eeeep" id="body">
     <div class="head">
-        <img src="logo.png" alt="Logo">
-        <div>File Sharing App</div>
+        <div class="center" style="display: flex;">
+            <img src="Image.png" alt=""> ASTRIQUES
+        </div>
     </div>
 
     <div class="main">
-        <div class="wrap">
-            <button id="createBtn">Create Share Code</button>
-            <button id="receiveBtn">Receive Share Code</button>
-        </div>
-
-        <div id="history" class="main2">
-            <h3>History</h3>
-            <div id="history-content"></div>
+        <div class="text">Create a new Key</div>
+        <div class="button-container">
+            <button onclick="create()">Create</button>
+            <button onclick="receive()">Receive</button>
         </div>
     </div>
 
-    <div id="popup" class="popup">
-        <div class="popup-content">
-            <h2 id="msg"></h2>
-            <input type="text" id="shareCode" placeholder="Enter Share Code">
-            <div class="load" id="loading" style="display:none;"></div>
-            <button id="submitBtn">Submit</button>
+    <div class="main2" align="center">
+        <div class="history-section">
+            <h3>Share History</h3>
+            <div id="shareHistory">
+                <i class='bx bx-history' style="font-size: 200px;text-align: center;justify-content: center;"></i>
+                <h1 class="ss">You haven't created any keys yet!</h1>
+            </div>
+        </div>
+        <div class="history-section">
+            <h3>Receive History</h3>
+            <div id="receiveHistory">
+                <i class='bx bx-history' style="font-size: 200px;text-align: center;justify-content: center;"></i>
+                <h1 class="ss">You haven't received any keys yet!</h1>
+            </div>
         </div>
     </div>
 
-    <div id="dialogBox" class="dialogBox">
-        <div class="dialog-content">
-            <span id="dialogMsg"></span>
-            <button id="dialogCloseBtn">Close</button>
+    <div class="wrap" id="wrap">
+        <div class="text">Follow Us On Instagram</div>
+        <div class="text blue">
+            <img src="insta.png" onclick="window.location.href='https://www.Instagram.com/astriques'" alt="">
         </div>
     </div>
+</div>
 
-    <script src="JS/home.js"></script>
+<dialog id="popup" align="center"></dialog>
+
+<script src="JS/home.js"></script>
 </body>
-</html>
+                                                                                                                  </html>
+                                                                                                                  
