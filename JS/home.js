@@ -1,155 +1,136 @@
-// Initialize history for shared and received items
-let sharedHistory = [];
-let receivedHistory = [];
+function msg(text) {
+    const popup = document.getElementById("popup");
+    const body = document.getElementById("body");
+    body.style.opacity = 0.2;
+    body.style.pointerEvents = "none";
+    document.body.style.overflow = "hidden";
 
-// Utility function to update history UI
-function updateHistory() {
-    let historyContent = document.getElementById("history-content");
-    historyContent.innerHTML = '';
+    popup.innerHTML = text;
+    popup.showModal();
+}
 
-    // Show shared history
-    sharedHistory.forEach(item => {
-        let card = document.createElement('div');
-        card.className = 'history-card';
-        card.innerHTML = `
-            <div class="username">Share Code: ${item.code}</div>
-            <div class="buttons">
-                <button class="copy-btn" onclick="copyCode('${item.code}')">Copy</button>
-                <button class="copy-btn" onclick="downloadFile('${item.code}')">Download</button>
+function close() {
+    const popup = document.getElementById("popup");
+    const body = document.getElementById("body");
+    body.style.opacity = 1;
+    body.style.pointerEvents = "all";
+    document.body.style.overflow = "scroll";
+
+    popup.innerHTML = "";
+    popup.close();
+}
+
+function create() {
+    let html = `
+    <div class="text">Create new Key</div>
+    <input id="file" type="file" placeholder="Select Your File">
+    <div id="msg" style="text-align: left; padding-left: 4px;color: red;"></div>
+    <button onclick="save()">Create Key</button>
+    <div class="loading" id="loading" style="display:none;">Generating...</div>
+    `;
+    msg(html);
+}
+
+function save() {
+    const fileInput = document.getElementById("file");
+    const loading = document.getElementById("loading");
+
+    if (fileInput.value !== "") {
+        loading.style.display = "block";  // Show loading text
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const base64 = event.target.result.split(',')[1]; // Extract base64 part
+
+            const passwordSystem = new PasswordSystem();
+            const { hash, salt } = passwordSystem.hashPassword(base64);
+
+            const history = localStorage.getItem("shareHistory") || '';
+            const newHistory = `
+            <div class="history-card">
+                <p class="username">${file.name}</p>
+                <div class="buttons">
+                    <div class="copy-btn" onclick="copyToClipboard('${hash}')">Copy Share Code</div>
+                    <div class="download-btn" onclick="downloadFile('${base64}', '${file.name}')">Download</div>
+                </div>
             </div>
-        `;
-        historyContent.appendChild(card);
-    });
+            `;
+            localStorage.setItem("shareHistory", history + newHistory);
+            loadShareHistory();
+            close();
+            loading.style.display = "none";  // Hide loading text
+        };
 
-    // Show received history (if any)
-    receivedHistory.forEach(item => {
-        let card = document.createElement('div');
-        card.className = 'history-card';
-        card.innerHTML = `
-            <div class="username">Received File: ${item.code}</div>
-            <div class="buttons">
-                <button class="copy-btn" onclick="copyCode('${item.code}')">Copy</button>
-            </div>
-        `;
-        historyContent.appendChild(card);
-    });
-}
-
-// Open the popup for creating or receiving file
-function openPopup(isCreate) {
-    document.getElementById("popup").style.display = 'block';
-    document.getElementById("msg").textContent = isCreate ? "Generate your share code" : "Enter share code to receive file";
-    document.getElementById("shareCode").value = '';
-    document.getElementById("loading").style.display = 'none';
-}
-
-// Handle submit for generating or receiving a share code
-document.getElementById("submitBtn").addEventListener('click', async function() {
-    const shareCode = document.getElementById("shareCode").value.trim();
-    if (!shareCode) {
-        showDialog('Please enter a valid code.');
-        return;
-    }
-
-    // Show loading animation
-    document.getElementById("loading").style.display = 'inline-block';
-
-    // Simulate network request (could be replaced with an actual API call)
-    setTimeout(async function() {
-        document.getElementById("loading").style.display = 'none';
-        document.getElementById("popup").style.display = 'none';
-
-        // Custom "hashing" method
-        const hashedCode = base64Encode(shareCode);
-
-        // Add to shared history or received history based on context
-        if (document.getElementById("msg").textContent.includes('Generate')) {
-            sharedHistory.push({ code: hashedCode });
-            const encodedFile = encodeFileToBase64(hashedCode);
-            sharedHistory[sharedHistory.length - 1].file = encodedFile;
-        } else {
-            receivedHistory.push({ code: hashedCode });
-            // Optionally, you could fetch the file from a server here if needed
-        }
-
-        // Update history UI
-        updateHistory();
-    }, 2000);
-});
-
-// Custom "hashing" function (simply Base64 encoding)
-function base64Encode(text) {
-    let encoded = btoa(unescape(encodeURIComponent(text)));  // Encoding string to base64
-    return encoded;
-}
-
-// Custom "unhashing" function (Base64 decoding)
-function base64Decode(encodedText) {
-    let decoded = decodeURIComponent(escape(atob(encodedText)));  // Decoding from base64
-    return decoded;
-}
-
-// Convert string to base64 for file sharing
-function encodeFileToBase64(text) {
-    let encoded = btoa(unescape(encodeURIComponent(text)));  // Encoding string to base64
-    return encoded;
-}
-
-// Convert base64 to file object
-function base64ToFile(base64) {
-    let byteString = atob(base64);
-    let arrayBuffer = new ArrayBuffer(byteString.length);
-    let uint8Array = new Uint8Array(arrayBuffer);
-
-    for (let i = 0; i < byteString.length; i++) {
-        uint8Array[i] = byteString.charCodeAt(i);
-    }
-
-    let file = new Blob([uint8Array], { type: 'application/octet-stream' });
-    return file;
-}
-
-// Show dialog box with a custom message
-function showDialog(message) {
-    const dialogBox = document.getElementById("dialogBox");
-    document.getElementById("dialogMsg").textContent = message;
-    dialogBox.style.display = 'block';
-
-    // Close the dialog box when the button is clicked
-    document.getElementById("dialogCloseBtn").onclick = function() {
-        dialogBox.style.display = 'none';
-    };
-}
-
-// Event listeners for buttons to create or receive file
-document.getElementById("createBtn").addEventListener('click', function() {
-    openPopup(true);
-});
-
-document.getElementById("receiveBtn").addEventListener('click', function() {
-    openPopup(false);
-});
-
-// Function to copy share code to clipboard
-function copyCode(code) {
-    navigator.clipboard.writeText(code).then(function() {
-        showDialog('Share code copied to clipboard!');
-    }).catch(function() {
-        showDialog('Failed to copy code.');
-    });
-}
-
-// Function to simulate downloading a file (for now just log the action)
-function downloadFile(code) {
-    const historyItem = sharedHistory.find(item => item.code === code);
-    if (historyItem && historyItem.file) {
-        // Create a file from the base64 string
-        const file = base64ToFile(historyItem.file);
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(file);
-        a.download = 'shared_file.txt'; // Name of the downloaded file
-        a.click();
+        reader.readAsDataURL(file);
     } else {
-        showDialog('No file available for this share code.');
+        document.getElementById("msg").innerText = "Please select a file";
     }
 }
+
+function copyToClipboard(shareCode) {
+    navigator.clipboard.writeText(shareCode);
+    alert("Share Code Copied!");
+}
+
+function downloadFile(base64, filename) {
+    const link = document.createElement("a");
+    link.href = "data:application/octet-stream;base64," + base64;
+    link.download = "ast-" + filename;
+    link.click();
+}
+
+function loadShareHistory() {
+    const shareHistory = localStorage.getItem("shareHistory") || `<i class='bx bx-history' style="font-size: 200px;text-align: center;justify-content: center;"></i>
+    <h1 class="ss">You haven't created any keys yet!</h1>`;
+    document.getElementById("shareHistory").innerHTML = shareHistory;
+}
+
+function loadReceiveHistory() {
+    const receiveHistory = localStorage.getItem("receivedHistory") || `<i class='bx bx-history' style="font-size: 200px;text-align: center;justify-content: center;"></i>
+    <h1 class="ss">You haven't received any keys yet!</h1>`;
+    document.getElementById("receiveHistory").innerHTML = receiveHistory;
+}
+
+function receive() {
+    let html = `
+    <div class="text">Enter Share Code</div>
+    <input id="shareCode" type="text" placeholder="Enter Share Code">
+    <button onclick="receiveKey()">Receive Key</button>
+    <div class="loading" id="loading" style="display:none;">Generating...</div>
+    `;
+    msg(html);
+}
+
+function receiveKey() {
+    const shareCode = document.getElementById("shareCode").value;
+    const loading = document.getElementById("loading");
+
+    if (shareCode) {
+        loading.style.display = "block";  // Show loading text
+
+        const passwordSystem = new PasswordSystem();
+        const salt = "yourSalt"; // Should be retrieved with share code
+        const originalFile = passwordSystem.unhashPassword(shareCode, salt);
+        
+        const history = localStorage.getItem("receivedHistory") || '';
+        const newHistory = `
+        <div class="history-card">
+            <p class="username">Received: ${originalFile}</p>
+            <div class="buttons">
+                <div class="download-btn" onclick="downloadFile('${originalFile}')">Download</div>
+            </div>
+        </div>
+        `;
+        localStorage.setItem("receivedHistory", history + newHistory);
+        loadReceiveHistory();
+        close();
+        loading.style.display = "none";  // Hide loading text
+    } else {
+        alert("Please enter a share code.");
+    }
+}
+
+loadShareHistory();
+loadReceiveHistory();
+    
