@@ -1,182 +1,140 @@
-// Function to show a popup
-function msg(text) {
-  const popup = document.getElementById("popup");
-  document.getElementById("body").style.opacity = 0.2;
-  document.getElementById("body").style.pointerEvents = "none";
-  document.body.style.overflow = "hidden";
-
-  popup.innerHTML = text;
-  popup.show();
+function msg(htmlContent) {
+    const popup = document.getElementById("popup");
+    document.getElementById("body").style.opacity = 0.2;
+    document.getElementById("body").style.pointerEvents = "none";
+    document.body.style.overflow = "hidden";
+    popup.innerHTML = htmlContent;
+    popup.show();
 }
 
-// Function to close the popup
-function close() {
-  const popup = document.getElementById("popup");
-  document.getElementById("body").style.opacity = 1;
-  document.getElementById("body").style.pointerEvents = "all";
-  document.body.style.overflow = "scroll";
-  popup.innerHTML = "";
-  popup.close();
+function closeDialog() {
+    const popup = document.getElementById("popup");
+    document.getElementById("body").style.opacity = 1;
+    document.getElementById("body").style.pointerEvents = "all";
+    document.body.style.overflow = "scroll";
+    popup.innerHTML = "";
+    popup.close();
 }
 
-// Sender: Create a new key
 function create() {
-  const html = `
-    <div class="text">Create a new Key</div>
-    <input id="file" type="file" placeholder="Select Your File">
-    <div id="msg" style="text-align: left; padding-left: 4px; color: red;"></div>
-    <button onclick="saveKey()">Create Key</button>
-  `;
-  msg(html);
-}
-
-// Receiver: Unhash a key
-function unhashKeyPopup() {
-  const html = `
-    <div class="text">Unhash Key</div>
-    <textarea id="hashInput" placeholder="Enter Share Code"></textarea>
-    <div id="msg" style="text-align: left; padding-left: 4px; color: red;"></div>
-    <button onclick="unhashKey()">Unhash Key</button>
-  `;
-  msg(html);
-}
-
-// Convert file to Base64
-function fileToBase64(file, callback) {
-  const reader = new FileReader();
-  reader.onload = () => callback(reader.result.split(",")[1]);
-  reader.readAsDataURL(file);
-}
-
-// Save key for sender
-function saveKey() {
-  const fileInput = document.getElementById("file").files[0];
-  if (!fileInput) {
-    document.getElementById("msg").innerText = "Please select a file";
-    return;
-  }
-
-  fileToBase64(fileInput, (base64) => {
-    const passwordSystem = new PasswordSystem();
-    const { hash, salt } = passwordSystem.hashPassword(base64);
-
-    // Save to history
-    const historyEntry = `
-      <div class="history-card">
-        <p class="username">${fileInput.name}</p>
-        <div class="buttons">
-          <div class="copy-btn" onclick="navigator.clipboard.writeText('${hash}');this.innerText='Copied';setTimeout(()=>{this.innerText='Copy Code';},2000);">Copy Share Code</div>
-          <div class="download-btn" onclick="base64ToFile('${base64}', '${fileInput.name}', '${fileInput.type}')">Download File</div>
-        </div>
-        <div style="display:none;" data-hash="${hash}" data-salt="${salt}" data-filename="${fileInput.name}" data-filetype="${fileInput.type}" data-base64="${base64}"></div>
-      </div>
+    const html = `
+        <div class="text">Create a new Key</div>
+        <input id="file" type="file" placeholder="Select Your File">
+        <div id="msg" style="text-align: left; padding-left: 4px;color: red;"></div>
+        <button class="button" onclick="saveKey()">Create Key</button>
     `;
-
-    const history = localStorage.getItem("history") || "";
-    localStorage.setItem("history", history + historyEntry);
-    loadHistory();
-    document.getElementById("msg").style.color = "green";
-    document.getElementById("msg").innerText = "Key created successfully!";
-    setTimeout(close, 2000);
-  });
+    msg(html);
 }
 
-// Unhash key for receiver
+function unhashDialog() {
+    const html = `
+        <div class="text">Enter Share Key</div>
+        <input id="hashInput" type="text" placeholder="Enter Share Key">
+        <div id="msg" style="text-align: left; padding-left: 4px;color: red;"></div>
+        <button class="button" onclick="unhashKey()">Retrieve File</button>
+    `;
+    msg(html);
+}
+
+function showLoading(message) {
+    const html = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <div>${message}</div>
+        </div>
+    `;
+    msg(html);
+}
+
+function saveKey() {
+    const fileInput = document.getElementById("file").files[0];
+    if (!fileInput) {
+        document.getElementById("msg").innerText = "Please select a file";
+        return;
+    }
+    showLoading("Processing file...");
+    fileToBase64(fileInput, (base64) => {
+        const passwordSystem = new PasswordSystem();
+        const { hash } = passwordSystem.hashPassword(base64);
+
+        const historyEntry = `
+            <div class="history-card">
+                <p class="username">${fileInput.name}</p>
+                <div class="buttons">
+                    <div class="copy-btn button" onclick="navigator.clipboard.writeText('${hash}');this.innerText='Copied';setTimeout(()=>{this.innerText='Copy Key';},2000);">Copy Share Key</div>
+                    <button class="button" onclick="base64ToFile('${base64}', '${fileInput.name}', '${fileInput.type}')">Download</button>
+                </div>
+            </div>
+        `;
+
+        const sharedHistory = localStorage.getItem("sharedHistory") || "";
+        localStorage.setItem("sharedHistory", sharedHistory + historyEntry);
+        loadHistory();
+        closeDialog();
+    });
+}
+
 function unhashKey() {
-  const hashInput = document.getElementById("hashInput").value;
-  if (!hashInput) {
-    document.getElementById("msg").innerText = "Please enter a share code";
-    return;
-  }
-
-  const history = document.getElementById("history").children;
-  for (let i = 0; i < history.length; i++) {
-    const data = history[i].querySelector("div[data-hash]");
-    if (data && data.dataset.hash === hashInput) {
-      const base64 = data.dataset.base64;
-      const filename = data.dataset.filename;
-      const filetype = data.dataset.filetype;
-
-      base64ToFile(base64, filename, filetype);
-      document.getElementById("msg").style.color = "green";
-      document.getElementById("msg").innerText = "File retrieved successfully!";
-      setTimeout(close, 2000);
-      return;
+    const hashInput = document.getElementById("hashInput").value;
+    if (!hashInput) {
+        document.getElementById("msg").innerText = "Please enter a share key";
+        return;
     }
-  }
+    showLoading("Retrieving file...");
+    const history = document.getElementById("shared-history").children;
+    for (let i = 0; i < history.length; i++) {
+        const data = history[i].querySelector("div[data-hash]");
+        if (data && data.dataset.hash === hashInput) {
+            const base64 = data.dataset.base64;
+            const filename = data.dataset.filename;
+            const filetype = data.dataset.filetype;
 
-  document.getElementById("msg").innerText = "Invalid share code";
+            const receivedEntry = `
+                <div class="history-card">
+                    <p class="username">${filename}</p>
+                    <div class="buttons">
+                        <button class="button" onclick="base64ToFile('${base64}', '${filename}', '${filetype}')">Download</button>
+                    </div>
+                </div>
+            `;
+            const receivedHistory = localStorage.getItem("receivedHistory") || "";
+            localStorage.setItem("receivedHistory", receivedHistory + receivedEntry);
+
+            loadHistory();
+            closeDialog();
+            return;
+        }
+    }
+    document.getElementById("msg").innerText = "Invalid share key.";
 }
 
-// Convert Base64 back to file and download
-function base64ToFile(base64, fileName, fileType) {
-  const blob = new Blob([Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))], { type: fileType });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  link.click();
-}
-
-// Load history from localStorage
 function loadHistory() {
-  const history = localStorage.getItem("history") || `
-    <i class='bx bx-history' style="font-size: 200px; text-align: center; justify-content: center;"></i>
-    <h1 class="ss">You haven't created any keys yet!</h1>
-  `;
-  document.getElementById("history").innerHTML = history;
+    const sharedHistory = localStorage.getItem("sharedHistory") || `<h1 class="ss">You haven't shared any keys yet!</h1>`;
+    const receivedHistory = localStorage.getItem("receivedHistory") || `<h1 class="ss">You haven't received any keys yet!</h1>`;
+    document.getElementById("shared-history").innerHTML = sharedHistory;
+    document.getElementById("received-history").innerHTML = receivedHistory;
 }
 
-// Initialize history
+function fileToBase64(file, callback) {
+    const reader = new FileReader();
+    reader.onload = () => callback(reader.result.split(",")[1]);
+    reader.readAsDataURL(file);
+}
+
+function base64ToFile(base64, filename, filetype) {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length).fill().map((_, i) => slice.charCodeAt(i));
+        byteArrays.push(new Uint8Array(byteNumbers));
+    }
+    const blob = new Blob(byteArrays, { type: filetype });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
 loadHistory();
-
-// PasswordSystem class (same as your provided implementation)
-class PasswordSystem {
-  constructor() {
-    this.CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*";
-    this.ROUNDS = 10;
-    this.PRIME1 = 31;
-    this.PRIME2 = 37;
-  }
-
-  #generateSalt() {
-    let salt = "";
-    for (let i = 0; i < 16; i++) {
-      salt += this.CHARSET[Math.floor(Math.random() * this.CHARSET.length)];
-    }
-    return salt;
-  }
-
-  #complexify(input, salt) {
-    const combined = input + salt;
-    let result = "";
-    for (let i = 0; i < combined.length; i++) {
-      const char = combined.charCodeAt(i);
-      const shifted = ((char << 5) ^ (char >> 3)) & 0xff;
-      const mixed = (shifted * this.PRIME1 + this.PRIME2) % 256;
-      result += mixed.toString(16).padStart(2, "0");
-    }
-    return result;
-  }
-
-  #transform(input) {
-    let result = input;
-    for (let i = 0; i < this.ROUNDS; i++) {
-      result = result.split("").reverse().join("");
-      result = btoa(result).replace(/=/g, "");
-      result = result
-        .split("")
-        .map((char, index) => String.fromCharCode((char.charCodeAt(0) + index + 1) % 128))
-        .join("");
-    }
-    return result;
-  }
-
-  hashPassword(password) {
-    const salt = this.#generateSalt();
-    const complex = this.#complexify(password, salt);
-    const transformed = this.#transform(complex);
-    const hash = (transformed + salt).slice(0, 8);
-    return { hash, salt };
-  }
-                                                       }
-    
+                      
