@@ -1,140 +1,155 @@
-function msg(htmlContent) {
-    const popup = document.getElementById("popup");
-    document.getElementById("body").style.opacity = 0.2;
-    document.getElementById("body").style.pointerEvents = "none";
-    document.body.style.overflow = "hidden";
-    popup.innerHTML = htmlContent;
-    popup.show();
-}
+// Initialize history for shared and received items
+let sharedHistory = [];
+let receivedHistory = [];
 
-function closeDialog() {
-    const popup = document.getElementById("popup");
-    document.getElementById("body").style.opacity = 1;
-    document.getElementById("body").style.pointerEvents = "all";
-    document.body.style.overflow = "scroll";
-    popup.innerHTML = "";
-    popup.close();
-}
+// Utility function to update history UI
+function updateHistory() {
+    let historyContent = document.getElementById("history-content");
+    historyContent.innerHTML = '';
 
-function create() {
-    const html = `
-        <div class="text">Create a new Key</div>
-        <input id="file" type="file" placeholder="Select Your File">
-        <div id="msg" style="text-align: left; padding-left: 4px;color: red;"></div>
-        <button class="button" onclick="saveKey()">Create Key</button>
-    `;
-    msg(html);
-}
-
-function unhashDialog() {
-    const html = `
-        <div class="text">Enter Share Key</div>
-        <input id="hashInput" type="text" placeholder="Enter Share Key">
-        <div id="msg" style="text-align: left; padding-left: 4px;color: red;"></div>
-        <button class="button" onclick="unhashKey()">Retrieve File</button>
-    `;
-    msg(html);
-}
-
-function showLoading(message) {
-    const html = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <div>${message}</div>
-        </div>
-    `;
-    msg(html);
-}
-
-function saveKey() {
-    const fileInput = document.getElementById("file").files[0];
-    if (!fileInput) {
-        document.getElementById("msg").innerText = "Please select a file";
-        return;
-    }
-    showLoading("Processing file...");
-    fileToBase64(fileInput, (base64) => {
-        const passwordSystem = new PasswordSystem();
-        const { hash } = passwordSystem.hashPassword(base64);
-
-        const historyEntry = `
-            <div class="history-card">
-                <p class="username">${fileInput.name}</p>
-                <div class="buttons">
-                    <div class="copy-btn button" onclick="navigator.clipboard.writeText('${hash}');this.innerText='Copied';setTimeout(()=>{this.innerText='Copy Key';},2000);">Copy Share Key</div>
-                    <button class="button" onclick="base64ToFile('${base64}', '${fileInput.name}', '${fileInput.type}')">Download</button>
-                </div>
+    // Show shared history
+    sharedHistory.forEach(item => {
+        let card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+            <div class="username">Share Code: ${item.code}</div>
+            <div class="buttons">
+                <button class="copy-btn" onclick="copyCode('${item.code}')">Copy</button>
+                <button class="copy-btn" onclick="downloadFile('${item.code}')">Download</button>
             </div>
         `;
+        historyContent.appendChild(card);
+    });
 
-        const sharedHistory = localStorage.getItem("sharedHistory") || "";
-        localStorage.setItem("sharedHistory", sharedHistory + historyEntry);
-        loadHistory();
-        closeDialog();
+    // Show received history (if any)
+    receivedHistory.forEach(item => {
+        let card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+            <div class="username">Received File: ${item.code}</div>
+            <div class="buttons">
+                <button class="copy-btn" onclick="copyCode('${item.code}')">Copy</button>
+            </div>
+        `;
+        historyContent.appendChild(card);
     });
 }
 
-function unhashKey() {
-    const hashInput = document.getElementById("hashInput").value;
-    if (!hashInput) {
-        document.getElementById("msg").innerText = "Please enter a share key";
+// Open the popup for creating or receiving file
+function openPopup(isCreate) {
+    document.getElementById("popup").style.display = 'block';
+    document.getElementById("msg").textContent = isCreate ? "Generate your share code" : "Enter share code to receive file";
+    document.getElementById("shareCode").value = '';
+    document.getElementById("loading").style.display = 'none';
+}
+
+// Handle submit for generating or receiving a share code
+document.getElementById("submitBtn").addEventListener('click', async function() {
+    const shareCode = document.getElementById("shareCode").value.trim();
+    if (!shareCode) {
+        showDialog('Please enter a valid code.');
         return;
     }
-    showLoading("Retrieving file...");
-    const history = document.getElementById("shared-history").children;
-    for (let i = 0; i < history.length; i++) {
-        const data = history[i].querySelector("div[data-hash]");
-        if (data && data.dataset.hash === hashInput) {
-            const base64 = data.dataset.base64;
-            const filename = data.dataset.filename;
-            const filetype = data.dataset.filetype;
 
-            const receivedEntry = `
-                <div class="history-card">
-                    <p class="username">${filename}</p>
-                    <div class="buttons">
-                        <button class="button" onclick="base64ToFile('${base64}', '${filename}', '${filetype}')">Download</button>
-                    </div>
-                </div>
-            `;
-            const receivedHistory = localStorage.getItem("receivedHistory") || "";
-            localStorage.setItem("receivedHistory", receivedHistory + receivedEntry);
+    // Show loading animation
+    document.getElementById("loading").style.display = 'inline-block';
 
-            loadHistory();
-            closeDialog();
-            return;
+    // Simulate network request (could be replaced with an actual API call)
+    setTimeout(async function() {
+        document.getElementById("loading").style.display = 'none';
+        document.getElementById("popup").style.display = 'none';
+
+        // Custom "hashing" method
+        const hashedCode = base64Encode(shareCode);
+
+        // Add to shared history or received history based on context
+        if (document.getElementById("msg").textContent.includes('Generate')) {
+            sharedHistory.push({ code: hashedCode });
+            const encodedFile = encodeFileToBase64(hashedCode);
+            sharedHistory[sharedHistory.length - 1].file = encodedFile;
+        } else {
+            receivedHistory.push({ code: hashedCode });
+            // Optionally, you could fetch the file from a server here if needed
         }
+
+        // Update history UI
+        updateHistory();
+    }, 2000);
+});
+
+// Custom "hashing" function (simply Base64 encoding)
+function base64Encode(text) {
+    let encoded = btoa(unescape(encodeURIComponent(text)));  // Encoding string to base64
+    return encoded;
+}
+
+// Custom "unhashing" function (Base64 decoding)
+function base64Decode(encodedText) {
+    let decoded = decodeURIComponent(escape(atob(encodedText)));  // Decoding from base64
+    return decoded;
+}
+
+// Convert string to base64 for file sharing
+function encodeFileToBase64(text) {
+    let encoded = btoa(unescape(encodeURIComponent(text)));  // Encoding string to base64
+    return encoded;
+}
+
+// Convert base64 to file object
+function base64ToFile(base64) {
+    let byteString = atob(base64);
+    let arrayBuffer = new ArrayBuffer(byteString.length);
+    let uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
     }
-    document.getElementById("msg").innerText = "Invalid share key.";
+
+    let file = new Blob([uint8Array], { type: 'application/octet-stream' });
+    return file;
 }
 
-function loadHistory() {
-    const sharedHistory = localStorage.getItem("sharedHistory") || `<h1 class="ss">You haven't shared any keys yet!</h1>`;
-    const receivedHistory = localStorage.getItem("receivedHistory") || `<h1 class="ss">You haven't received any keys yet!</h1>`;
-    document.getElementById("shared-history").innerHTML = sharedHistory;
-    document.getElementById("received-history").innerHTML = receivedHistory;
+// Show dialog box with a custom message
+function showDialog(message) {
+    const dialogBox = document.getElementById("dialogBox");
+    document.getElementById("dialogMsg").textContent = message;
+    dialogBox.style.display = 'block';
+
+    // Close the dialog box when the button is clicked
+    document.getElementById("dialogCloseBtn").onclick = function() {
+        dialogBox.style.display = 'none';
+    };
 }
 
-function fileToBase64(file, callback) {
-    const reader = new FileReader();
-    reader.onload = () => callback(reader.result.split(",")[1]);
-    reader.readAsDataURL(file);
+// Event listeners for buttons to create or receive file
+document.getElementById("createBtn").addEventListener('click', function() {
+    openPopup(true);
+});
+
+document.getElementById("receiveBtn").addEventListener('click', function() {
+    openPopup(false);
+});
+
+// Function to copy share code to clipboard
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        showDialog('Share code copied to clipboard!');
+    }).catch(function() {
+        showDialog('Failed to copy code.');
+    });
 }
 
-function base64ToFile(base64, filename, filetype) {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-        const slice = byteCharacters.slice(offset, offset + 512);
-        const byteNumbers = new Array(slice.length).fill().map((_, i) => slice.charCodeAt(i));
-        byteArrays.push(new Uint8Array(byteNumbers));
+// Function to simulate downloading a file (for now just log the action)
+function downloadFile(code) {
+    const historyItem = sharedHistory.find(item => item.code === code);
+    if (historyItem && historyItem.file) {
+        // Create a file from the base64 string
+        const file = base64ToFile(historyItem.file);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(file);
+        a.download = 'shared_file.txt'; // Name of the downloaded file
+        a.click();
+    } else {
+        showDialog('No file available for this share code.');
     }
-    const blob = new Blob(byteArrays, { type: filetype });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
 }
-
-loadHistory();
-                      
