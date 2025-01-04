@@ -7,10 +7,7 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="Style/body2.css">
     <title>ASTRIQUES</title>
 </head>
@@ -23,34 +20,33 @@
             </div>
         </div>
         <div class="main">
-            <div class="text">Create a new AstKey</div>
+            <div class="text">Create a new Key</div>
             <button onclick="create()">Create</button>
         </div>
+        <div class="main">
+            <div class="text">Unhash Key</div>
+            <button onclick="unhashKeyPopup()">Unhash</button>
+        </div>
         <div class="main2" align="center">
-            <!-- History Section -->
             <div class="history-section">
                 <h3>History</h3>
                 <div id="history">
-                    <i class='bx bx-history' t style="font-size: 200px;text-align: center;justify-content: center;"></i>
+                    <i class='bx bx-history' style="font-size: 200px; text-align: center; justify-content: center;"></i>
                     <h1 class="ss">You haven't created any keys yet!</h1>
                 </div>
             </div>
-
         </div>
         <div class="wrap" id="wrap">
             <div class="text">Follow Us On Instagram</div>
             <div class="text blue">
-
-                <img src="insta.png" onclick="window.location.href= 'https://www.Instagram.com/astriques'" alt="">
+                <img src="insta.png" onclick="window.location.href= 'https://www.instagram.com/astriques'" alt="">
             </div>
-            <br> 
+            <br>
         </div>
     </div>
     <dialog id="popup" align="center"></dialog>
-
-
-    </dialog>
     <script src="JS/home.js"></script>
 </body>
 
-</html>
+    </html>
+    
