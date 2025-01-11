@@ -1,133 +1,712 @@
+// OSTUXY - Secure Offline File Sharing
+// Version 3.0
+
+// Utility functions
+const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+const compressData = async (data) => {
+    const compressed = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(pako.deflate(e.target.result));
+        reader.readAsArrayBuffer(new Blob([data]));
+    });
+    return compressed;
+};
+const decompressData = async (compressedData) => {
+    const decompressed = pako.inflate(compressedData);
+    return new Blob([decompressed]);
+};
+const encryptData = (data, key) => CryptoJS.AES.encrypt(data, key).toString();
+const decryptData = (encryptedData, key) => CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
+
 // DOM Elements
-const shareBtn = document.getElementById('shareBtn');
-const receiveBtn = document.getElementById('receiveBtn');
+const app = document.getElementById('app');
+const mainContent = document.getElementById('mainContent');
 const modal = document.getElementById('modal');
-const fileInput = document.getElementById('fileInput');
-const sendBtn = document.getElementById('sendBtn');
-const sentHistory = document.getElementById('sentHistory');
-const receivedHistory = document.getElementById('receivedHistory');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const modalCancelBtn = document.getElementById('modalCancelBtn');
+const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+const toast = document.getElementById('toast');
+
+// Global variables
+let currentView = 'share';
+let settings = {
+    theme: 'light',
+    accentColor: 'blue',
+    codeLength: 6,
+    maxFileSize: 100, // MB
+    autoDeleteDays: 30,
+    defaultEncryption: 'medium',
+    requirePassword: false
+};
 
 // Event Listeners
-shareBtn.addEventListener('click', openModal);
-receiveBtn.addEventListener('click', receiveFile);
-sendBtn.addEventListener('click', shareFile);
-window.addEventListener('click', closeModalOutside);
+document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchView(e.currentTarget.getAttribute('href').substring(1));
+    });
+});
 
-// Open modal
-function openModal() {
-    modal.style.display = 'block';
+// Initialize the app
+function initApp() {
+    loadSettings();
+    switchView('share');
+    setupPullToRefresh();
 }
 
-// Close modal when clicking outside
-function closeModalOutside(event) {
-    if (event.target === modal) {
-        modal.style.display = 'none';
+// Switch between different views
+function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(view).classList.add('active');
+    document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.classList.toggle('active', tab.getAttribute('href') === `#${view}`);
+    });
+
+    switch (view) {
+        case 'share':
+            setupShareView();
+            break;
+        case 'receive':
+            setupReceiveView();
+            break;
+        case 'history':
+            setupHistoryView();
+            break;
+        case 'settings':
+            setupSettingsView();
+            break;
     }
 }
 
-// Generate 6-digit code from Base64 data
-function generateCode(base64) {
-    let hash = 0;
-    for (let i = 0; i < base64.length; i++) {
-        const char = base64.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash % 1000000).toString().padStart(6, '0');
-}
+// Setup Share View
+function setupShareView() {
+    const fileInput = document.getElementById('fileInput');
+    const shareFileBtn = document.getElementById('shareFileBtn');
+    const filePreview = document.getElementById('filePreview');
+    const shareProgress = document.getElementById('shareProgress');
 
-// Reverse 6-digit code to Base64 data (simplified for demo)
-function reverseCode(code) {
-    // In a real implementation, this would be a more complex reversible algorithm
-    return atob(code);
-}
-
-// Share file
-function shareFile() {
-    const file = fileInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const base64 = event.target.result.split(',')[1];
-            const code = generateCode(base64);
-            saveToHistory('sent', file.name, code, file.type);
-            modal.style.display = 'none';
-            alert(`Your share code is: ${code}`);
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-// Receive file
-function receiveFile() {
-    const code = prompt('Enter the 6-digit share code:');
-    if (code && code.length === 6) {
-        try {
-            const base64 = reverseCode(code);
-            const fileName = `received_file_${Date.now()}`;
-            saveToHistory('received', fileName, code);
-            alert('File received successfully!');
-        } catch (error) {
-            alert('Invalid share code. Please try again.');
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > settings.maxFileSize * 1024 * 1024) {
+                showToast(`File size exceeds the maximum limit of ${settings.maxFileSize}MB.`, 'error');
+                fileInput.value = '';
+                return;
+            }
+            showFilePreview(file, filePreview);
         }
-    }
-}
+    });
 
-// Save to history
-function saveToHistory(type, fileName, code, fileType = '') {
-    const history = JSON.parse(localStorage.getItem(type + 'History')) || [];
-    history.push({ fileName, code, fileType, timestamp: Date.now() });
-    localStorage.setItem(type + 'History', JSON.stringify(history));
-    updateHistoryDisplay();
-}
-
-// Update history display
-function updateHistoryDisplay() {
-    sentHistory.innerHTML = '';
-    receivedHistory.innerHTML = '';
-
-    const sentItems = JSON.parse(localStorage.getItem('sentHistory')) || [];
-    const receivedItems = JSON.parse(localStorage.getItem('receivedHistory')) || [];
-
-    sentItems.forEach(item => addHistoryItem(sentHistory, item));
-    receivedItems.forEach(item => addHistoryItem(receivedHistory, item));
-}
-
-// Add history item
-function addHistoryItem(container, item) {
-    const li = document.createElement('li');
-    li.innerHTML = `
-        <span>${item.fileName} (${new Date(item.timestamp).toLocaleString()})</span>
-        <div>
-            <button onclick="copyCode('${item.code}')" class="ios-button">Copy Code</button>
-            <button onclick="downloadFile('${item.code}', '${item.fileName}', '${item.fileType}')" class="ios-button">Download</button>
-        </div>
-    `;
-    container.appendChild(li);
-}
-
-// Copy code to clipboard
-function copyCode(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        alert('Code copied to clipboard!');
+    shareFileBtn.addEventListener('click', () => {
+        const file = fileInput.files[0];
+        if (file) {
+            shareFile(file, shareProgress);
+        } else {
+            showToast('Please select a file to share.', 'error');
+        }
     });
 }
 
-// Download file
-function downloadFile(code, fileName, fileType) {
+// Setup Receive View
+function setupReceiveView() {
+    const codeInput = document.getElementById('codeInput');
+    const receiveFileBtn = document.getElementById('receiveFileBtn');
+    const receiveProgress = document.getElementById('receiveProgress');
+
+    receiveFileBtn.addEventListener('click', () => {
+        const code = codeInput.value.trim().toUpperCase();
+        if (code.length === settings.codeLength) {
+            receiveFile(code, receiveProgress);
+        } else {
+            showToast(`Please enter a valid ${settings.codeLength}-digit code.`, 'error');
+        }
+    });
+}
+
+// Setup History View
+function setupHistoryView() {
+    const historyList = document.getElementById('historyList');
+    const historyTypeFilter = document.getElementById('historyTypeFilter');
+
+    const renderHistory = () => {
+        const history = getHistory();
+        const filteredHistory = history.filter(item => {
+            if (historyTypeFilter.value === 'all') return true;
+            return item.type === historyTypeFilter.value;
+        });
+
+        historyList.innerHTML = '';
+        filteredHistory.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <div class="history-item-info">
+                    <strong>${item.fileName}</strong>
+                    <br>
+                    <small>${new Date(item.timestamp).toLocaleString()}</small>
+                </div>
+                <div class="history-item-actions">
+                    <button class="ios-button secondary copy-code" data-code="${item.code}">Copy Code</button>
+                    ${item.type === 'sent' ? `<button class="ios-button primary download" data-code="${item.code}">Download</button>` : ''}
+                </div>
+            `;
+            historyList.appendChild(li);
+        });
+
+        // Add event listeners for copy code and download buttons
+        historyList.querySelectorAll('.copy-code').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const code = e.target.getAttribute('data-code');
+                navigator.clipboard.writeText(code).then(() => {
+                    showToast('Code copied to clipboard!', 'success');
+                });
+            });
+        });
+
+        historyList.querySelectorAll('.download').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const code = e.target.getAttribute('data-code');
+                downloadFile(code);
+            });
+        });
+    };
+
+    historyTypeFilter.addEventListener('change', renderHistory);
+    renderHistory();
+}
+
+// Setup Settings View
+function setupSettingsView() {
+    const themeSelect = document.getElementById('themeSelect');
+    const accentColorSelect = document.getElementById('accentColorSelect');
+    const codeLengthInput = document.getElementById('codeLengthInput');
+    const maxFileSizeInput = document.getElementById('maxFileSizeInput');
+    const autoDeleteInput = document.getElementById('autoDeleteInput');
+    const defaultEncryptionSelect = document.getElementById('defaultEncryptionSelect');
+    const passwordProtectionToggle = document.getElementById('passwordProtectionToggle');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+    // Populate settings
+    themeSelect.value = settings.theme;
+    accentColorSelect.value = settings.accentColor;
+    codeLengthInput.value = settings.codeLength;
+    maxFileSizeInput.value = settings.maxFileSize;
+    autoDeleteInput.value = settings.autoDeleteDays;
+    defaultEncryptionSelect.value = settings.defaultEncryption;
+    passwordProtectionToggle.checked = settings.requirePassword;
+
+    saveSettingsBtn.addEventListener('click', () => {
+        settings = {
+            theme: themeSelect.value,
+            accentColor: accentColorSelect.value,
+            codeLength: parseInt(codeLengthInput.value, 10),
+            maxFileSize: parseInt(maxFileSizeInput.value, 10),
+            autoDeleteDays: parseInt(autoDeleteInput.value, 10),
+            defaultEncryption: defaultEncryptionSelect.value,
+            requirePassword: passwordProtectionToggle.checked
+        };
+        saveSettings();
+        applySettings();
+        showToast('Settings saved successfully!', 'success');
+    });
+}
+
+// File sharing functionality
+async function shareFile(file, progressElement) {
     try {
-        const base64 = reverseCode(code);
-        const link = document.createElement('a');
-        link.href = `data:${fileType};base64,${base64}`;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        showProgress(progressElement, 0);
+        const compressedData = await compressData(file);
+        showProgress(progressElement, 30);
+
+        const code = generateCode();
+        const key = settings.requirePassword ? prompt('Enter a password to encrypt the file:') : code;
+        if (settings.requirePassword && !key) {
+            showToast('Password is required for encryption.', 'error');
+            return;
+        }
+
+        const encryptedData = encryptData(compressedData, key);
+        showProgress(progressElement, 60);
+
+        // Simulate uploading to a server (in a real app, you'd send this to your backend)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        showProgress(progressElement, 90);
+
+        saveSharedFile(file.name, file.type, encryptedData, code, key);
+        showProgress(progressElement, 100);
+
+        showToast(`File shared successfully. Your code is: ${code}`, 'success');
+        addToHistory('sent', file.name, file.type, code);
     } catch (error) {
-        alert('Error downloading file. Please try again.');
+        console.error('Error sharing file:', error);
+        showToast('An error occurred while sharing the file.', 'error');
     }
 }
 
-// Initial history display
-updateHistoryDisplay();
+// Receive file functionality
+async function receiveFile(code, progressElement) {
+    try {
+        showProgress(progressElement, 0);
+        const sharedFile = getSharedFile(code);
+        if (!sharedFile) {
+            showToast('Invalid code or file not found.', 'error');
+            return;
+        }
+
+        let key = code;
+        if (sharedFile.isPasswordProtected) {
+            key = prompt('This file is password-protected. Please enter the password:');
+            if (!key) {
+                showToast('Password is required to access this file.', 'error');
+                return;
+            }
+        }
+
+        showProgress(progressElement, 30);
+        const decryptedData = decryptData(sharedFile.data, key);
+        showProgress(progressElement, 60);
+        const decompressedData = await decompressData(decryptedData);
+        showProgress(progressElement, 90);
+
+        // Create a download link
+        const url = URL.createObjectURL(new Blob([decompressedData], { type: sharedFile.fileType }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = sharedFile.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        showProgress(progressElement, 100);
+        showToast('File received and downloaded successfully.', 'success');
+        addToHistory('received', sharedFile.fileName, sharedFile.fileType, code);
+    } catch (error) {
+        console.error('Error receiving file:', error);
+        showToast('An error occurred while receiving the file.', 'error');
+    }
+}
+
+// Save shared file to local storage
+function saveSharedFile(fileName, fileType, data, code, key) {
+    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
+    sharedFiles[code] = {
+        fileName,
+        fileType,
+        data,
+        timestamp: Date.now(),
+        expirationTime: Date.now() + (settings.autoDeleteDays * 24 * 60 * 60 * 1000),
+        isPasswordProtected: settings.requirePassword
+    };
+    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
+}
+
+// Get shared file from local storage
+function getSharedFile(code) {
+    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
+    return sharedFiles[code];
+}
+
+// Add file transfer to history
+function addToHistory(type, fileName, fileType, code) {
+    const history = getHistory();
+    history.unshift({ type, fileName, fileType, code, timestamp: Date.now() });
+    localStorage.setItem('transferHistory', JSON.stringify(history));
+}
+
+// Get transfer history
+function getHistory() {
+    return JSON.parse(localStorage.getItem('transferHistory')) || [];
+}
+
+// Load settings from local storage
+function loadSettings() {
+    const savedSettings = JSON.parse(localStorage.getItem('settings'));
+    if (savedSettings) {
+        settings = { ...settings, ...savedSettings };
+    }
+    applySettings();
+}
+
+// Save settings to local storage
+function saveSettings() {
+    localStorage.setItem('settings', JSON.stringify(settings));
+}
+
+// Apply settings
+function applySettings() {
+    document.body.classList.remove('light-theme', 'dark-theme');
+    document.body.classList.add(`${settings.theme}-theme`);
+    document.documentElement.style.setProperty('--primary-color', `var(--${settings.accentColor})`);
+}
+
+// Show file preview
+function showFilePreview(file, previewElement) {
+    previewElement.innerHTML = '';
+    if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.onload = () => URL.revokeObjectURL(img.src);
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '200px';
+        previewElement.appendChild(img);
+    } else {
+        previewElement.textContent = `File: ${file.name} (${formatFileSize(file.size)})`;
+    }
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Show progress
+function showProgress(element, percent) {
+    element.style.display = 'block';
+    element.querySelector('.progress').style.width = `${percent}%`;
+    element.querySelector('.progress-text').textContent = `${percent}%`;
+    if (percent === 100) {
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 1000);
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Setup pull-to-refresh
+function setupPullToRefresh() {
+    const pullToRefresh = document.createElement('div');
+    pullToRefresh.className = 'pull-to-refresh';
+    pullToRefresh.innerHTML = '<div class="pull-to-refresh-icon"></div>';
+    mainContent.insertBefore(pullToRefresh, mainContent.firstChild);
+
+    let startY;
+    let currentY;
+    let refreshing = false;
+
+    mainContent.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].pageY;
+    });
+
+    mainI understand. I'll continue the text stream from the cut-off point, maintaining coherence and consistency with the previous content. Here's the continuation:
+
+touchstart', (e) => {
+        startY = e.touches[0].pageY;
+    });
+
+    mainContent.addEventListener('touchmove', (e) => {
+        if (refreshing) return;
+        currentY = e.touches[0].pageY;
+        const diff = currentY - startY;
+        if (diff > 0 && mainContent.scrollTop === 0) {
+            pullToRefresh.style.transform = `translateY(${Math.min(diff / 2, 60)}px)`;
+        }
+    });
+
+    mainContent.addEventListener('touchend', () => {
+        if (refreshing) return;
+        if (currentY - startY > 60) {
+            refreshContent();
+        } else {
+            pullToRefresh.style.transform = 'translateY(0)';
+        }
+    });
+
+    function refreshContent() {
+        refreshing = true;
+        pullToRefresh.style.transform = 'translateY(60px)';
+        // Simulate content refresh
+        setTimeout(() => {
+            refreshing = false;
+            pullToRefresh.style.transform = 'translateY(0)';
+            showToast('Content refreshed', 'success');
+        }, 1500);
+    }
+}
+
+// Auto-delete old shared files
+function autoDeleteOldFiles() {
+    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const code in sharedFiles) {
+        const file = sharedFiles[code];
+        if (now > file.expirationTime) {
+            delete sharedFiles[code];
+            deleted++;
+        }
+    }
+
+    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
+    console.log(`Auto-deleted ${deleted} expired shared files.`);
+}
+
+// Run auto-delete every day
+setInterval(autoDeleteOldFiles, 24 * 60 * 60 * 1000);
+
+// Initialize the app
+initApp();
+
+// Additional features and improvements
+
+// File type restrictions
+const allowedFileTypes = [
+    'image/*',
+    'audio/*',
+    'video/*',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain'
+];
+
+function updateFileInputAccept() {
+    const fileInput = document.getElementById('fileInput');
+    fileInput.accept = allowedFileTypes.join(',');
+}
+
+// Call this function after loading settings
+updateFileInputAccept();
+
+// Error handling and logging
+function logError(error, context) {
+    console.error(`Error in ${context}:`, error);
+    // In a real-world application, you might want to send this error to a logging service
+}
+
+// Wrap async functions with error handling
+async function wrapAsyncFunction(func, context) {
+    try {
+        await func();
+    } catch (error) {
+        logError(error, context);
+        showToast('An error occurred. Please try again.', 'error');
+    }
+}
+
+// Update main functions to use error handling wrapper
+function shareFile(file, progressElement) {
+    wrapAsyncFunction(async () => {
+        // ... (previous shareFile code)
+    }, 'shareFile');
+}
+
+function receiveFile(code, progressElement) {
+    wrapAsyncFunction(async () => {
+        // ... (previous receiveFile code)
+    }, 'receiveFile');
+}
+
+// Add keyboard shortcuts
+function addKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key) {
+                case 's':
+                    e.preventDefault();
+                    switchView('share');
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    switchView('receive');
+                    break;
+                case 'h':
+                    e.preventDefault();
+                    switchView('history');
+                    break;
+                case ',':
+                    e.preventDefault();
+                    switchView('settings');
+                    break;
+            }
+        }
+    });
+}
+
+// Call this function after initializing the app
+addKeyboardShortcuts();
+
+// Add file integrity check
+function calculateChecksum(data) {
+    return CryptoJS.MD5(data).toString();
+}
+
+// Update saveSharedFile function to include checksum
+function saveSharedFile(fileName, fileType, data, code, key) {
+    const checksum = calculateChecksum(data);
+    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
+    sharedFiles[code] = {
+        fileName,
+        fileType,
+        data,
+        checksum,
+        timestamp: Date.now(),
+        expirationTime: Date.now() + (settings.autoDeleteDays * 24 * 60 * 60 * 1000),
+        isPasswordProtected: settings.requirePassword
+    };
+    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
+}
+
+// Update receiveFile function to verify file integrity
+async function receiveFile(code, progressElement) {
+    try {
+        // ... (previous receiveFile code)
+
+        // Verify checksum
+        const receivedChecksum = calculateChecksum(decryptedData);
+        if (receivedChecksum !== sharedFile.checksum) {
+            showToast('File integrity check failed. The file may be corrupted.', 'error');
+            return;
+        }
+
+        // ... (rest of the receiveFile code)
+    } catch (error) {
+        console.error('Error receiving file:', error);
+        showToast('An error occurred while receiving the file.', 'error');
+    }
+}
+
+// Add support for large file sharing using chunks
+const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+
+async function sharelargeFile(file, progressElement) {
+    try {
+        showProgress(progressElement, 0);
+        const chunks = await splitFileIntoChunks(file);
+        const code = generateCode();
+        const key = settings.requirePassword ? prompt('Enter a password to encrypt the file:') : code;
+        if (settings.requirePassword && !key) {
+            showToast('Password is required for encryption.', 'error');
+            return;
+        }
+
+        for (let i = 0; i < chunks.length; i++) {
+            const compressedChunk = await compressData(chunks[i]);
+            const encryptedChunk = encryptData(compressedChunk, key);
+            saveSharedFileChunk(file.name, file.type, encryptedChunk, code, key, i, chunks.length);
+            showProgress(progressElement, (i + 1) / chunks.length * 100);
+        }
+
+        showToast(`Large file shared successfully. Your code is: ${code}`, 'success');
+        addToHistory('sent', file.name, file.type, code);
+    } catch (error) {
+        console.error('Error sharing large file:', error);
+        showToast('An error occurred while sharing the large file.', 'error');
+    }
+}
+
+async function splitFileIntoChunks(file) {
+    const chunks = [];
+    for (let start = 0; start < file.size; start += CHUNK_SIZE) {
+        const chunk = file.slice(start, start + CHUNK_SIZE);
+        chunks.push(chunk);
+    }
+    return chunks;
+}
+
+function saveSharedFileChunk(fileName, fileType, data, code, key, chunkIndex, totalChunks) {
+    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
+    if (!sharedFiles[code]) {
+        sharedFiles[code] = {
+            fileName,
+            fileType,
+            chunks: [],
+            timestamp: Date.now(),
+            expirationTime: Date.now() + (settings.autoDeleteDays * 24 * 60 * 60 * 1000),
+            isPasswordProtected: settings.requirePassword,
+            totalChunks
+        };
+    }
+    sharedFiles[code].chunks[chunkIndex] = data;
+    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
+}
+
+async function receiveLargeFile(code, progressElement) {
+    try {
+        showProgress(progressElement, 0);
+        const sharedFile = getSharedFile(code);
+        if (!sharedFile || !sharedFile.chunks) {
+            showToast('Invalid code or file not found.', 'error');
+            return;
+        }
+
+        let key = code;
+        if (sharedFile.isPasswordProtected) {
+            key = prompt('This file is password-protected. Please enter the password:');
+            if (!key) {
+                showToast('Password is required to access this file.', 'error');
+                return;
+            }
+        }
+
+        const chunks = [];
+        for (let i = 0; i < sharedFile.totalChunks; i++) {
+            const encryptedChunk = sharedFile.chunks[i];
+            const decryptedChunk = decryptData(encryptedChunk, key);
+            const decompressedChunk = await decompressData(decryptedChunk);
+            chunks.push(decompressedChunk);
+            showProgress(progressElement, (i + 1) / sharedFile.totalChunks * 100);
+        }
+
+        const completeFile = new Blob(chunks, { type: sharedFile.fileType });
+        const url = URL.createObjectURL(completeFile);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = sharedFile.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        showToast('Large file received and downloaded successfully.', 'success');
+        addToHistory('received', sharedFile.fileName, sharedFile.fileType, code);
+    } catch (error) {
+        console.error('Error receiving large file:', error);
+        showToast('An error occurred while receiving the large file.', 'error');
+    }
+}
+
+// Update the shareFile function to handle both regular and large files
+function shareFile(file, progressElement) {
+    if (file.size > CHUNK_SIZE) {
+        sharelargeFile(file, progressElement);
+    } else {
+        // Use the existing shareFile function for smaller files
+        wrapAsyncFunction(async () => {
+            // ... (previous shareFile code)
+        }, 'shareFile');
+    }
+}
+
+// Update the receiveFile function to handle both regular and large files
+function receiveFile(code, progressElement) {
+    const sharedFile = getSharedFile(code);
+    if (sharedFile && sharedFile.chunks) {
+        receiveLargeFile(code, progressElement);
+    } else {
+        // Use the existing receiveFile function for regular files
+        wrapAsyncFunction(async () => {
+            // ... (previous receiveFile code)
+        }, 'receiveFile');
+    }
+}
+
+// Initialize the app
+initApp();
 
