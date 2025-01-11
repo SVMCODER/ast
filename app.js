@@ -377,6 +377,14 @@ function showProgress(element, percent) {
 }
 
 // Show toast notification
+function showHere's the continuation of the text stream from the cut-off point:
+
+none';
+        }, 1000);
+    }
+}
+
+// Show toast notification
 function showToast(message, type = 'info') {
     toast.textContent = message;
     toast.className = `toast ${type}`;
@@ -398,12 +406,6 @@ function setupPullToRefresh() {
     let refreshing = false;
 
     mainContent.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].pageY;
-    });
-
-    mainI understand. I'll continue the text stream from the cut-off point, maintaining coherence and consistency with the previous content. Here's the continuation:
-
-touchstart', (e) => {
         startY = e.touches[0].pageY;
     });
 
@@ -457,255 +459,6 @@ function autoDeleteOldFiles() {
 
 // Run auto-delete every day
 setInterval(autoDeleteOldFiles, 24 * 60 * 60 * 1000);
-
-// Initialize the app
-initApp();
-
-// Additional features and improvements
-
-// File type restrictions
-const allowedFileTypes = [
-    'image/*',
-    'audio/*',
-    'video/*',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain'
-];
-
-function updateFileInputAccept() {
-    const fileInput = document.getElementById('fileInput');
-    fileInput.accept = allowedFileTypes.join(',');
-}
-
-// Call this function after loading settings
-updateFileInputAccept();
-
-// Error handling and logging
-function logError(error, context) {
-    console.error(`Error in ${context}:`, error);
-    // In a real-world application, you might want to send this error to a logging service
-}
-
-// Wrap async functions with error handling
-async function wrapAsyncFunction(func, context) {
-    try {
-        await func();
-    } catch (error) {
-        logError(error, context);
-        showToast('An error occurred. Please try again.', 'error');
-    }
-}
-
-// Update main functions to use error handling wrapper
-function shareFile(file, progressElement) {
-    wrapAsyncFunction(async () => {
-        // ... (previous shareFile code)
-    }, 'shareFile');
-}
-
-function receiveFile(code, progressElement) {
-    wrapAsyncFunction(async () => {
-        // ... (previous receiveFile code)
-    }, 'receiveFile');
-}
-
-// Add keyboard shortcuts
-function addKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            switch (e.key) {
-                case 's':
-                    e.preventDefault();
-                    switchView('share');
-                    break;
-                case 'r':
-                    e.preventDefault();
-                    switchView('receive');
-                    break;
-                case 'h':
-                    e.preventDefault();
-                    switchView('history');
-                    break;
-                case ',':
-                    e.preventDefault();
-                    switchView('settings');
-                    break;
-            }
-        }
-    });
-}
-
-// Call this function after initializing the app
-addKeyboardShortcuts();
-
-// Add file integrity check
-function calculateChecksum(data) {
-    return CryptoJS.MD5(data).toString();
-}
-
-// Update saveSharedFile function to include checksum
-function saveSharedFile(fileName, fileType, data, code, key) {
-    const checksum = calculateChecksum(data);
-    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
-    sharedFiles[code] = {
-        fileName,
-        fileType,
-        data,
-        checksum,
-        timestamp: Date.now(),
-        expirationTime: Date.now() + (settings.autoDeleteDays * 24 * 60 * 60 * 1000),
-        isPasswordProtected: settings.requirePassword
-    };
-    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
-}
-
-// Update receiveFile function to verify file integrity
-async function receiveFile(code, progressElement) {
-    try {
-        // ... (previous receiveFile code)
-
-        // Verify checksum
-        const receivedChecksum = calculateChecksum(decryptedData);
-        if (receivedChecksum !== sharedFile.checksum) {
-            showToast('File integrity check failed. The file may be corrupted.', 'error');
-            return;
-        }
-
-        // ... (rest of the receiveFile code)
-    } catch (error) {
-        console.error('Error receiving file:', error);
-        showToast('An error occurred while receiving the file.', 'error');
-    }
-}
-
-// Add support for large file sharing using chunks
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
-
-async function sharelargeFile(file, progressElement) {
-    try {
-        showProgress(progressElement, 0);
-        const chunks = await splitFileIntoChunks(file);
-        const code = generateCode();
-        const key = settings.requirePassword ? prompt('Enter a password to encrypt the file:') : code;
-        if (settings.requirePassword && !key) {
-            showToast('Password is required for encryption.', 'error');
-            return;
-        }
-
-        for (let i = 0; i < chunks.length; i++) {
-            const compressedChunk = await compressData(chunks[i]);
-            const encryptedChunk = encryptData(compressedChunk, key);
-            saveSharedFileChunk(file.name, file.type, encryptedChunk, code, key, i, chunks.length);
-            showProgress(progressElement, (i + 1) / chunks.length * 100);
-        }
-
-        showToast(`Large file shared successfully. Your code is: ${code}`, 'success');
-        addToHistory('sent', file.name, file.type, code);
-    } catch (error) {
-        console.error('Error sharing large file:', error);
-        showToast('An error occurred while sharing the large file.', 'error');
-    }
-}
-
-async function splitFileIntoChunks(file) {
-    const chunks = [];
-    for (let start = 0; start < file.size; start += CHUNK_SIZE) {
-        const chunk = file.slice(start, start + CHUNK_SIZE);
-        chunks.push(chunk);
-    }
-    return chunks;
-}
-
-function saveSharedFileChunk(fileName, fileType, data, code, key, chunkIndex, totalChunks) {
-    const sharedFiles = JSON.parse(localStorage.getItem('sharedFiles')) || {};
-    if (!sharedFiles[code]) {
-        sharedFiles[code] = {
-            fileName,
-            fileType,
-            chunks: [],
-            timestamp: Date.now(),
-            expirationTime: Date.now() + (settings.autoDeleteDays * 24 * 60 * 60 * 1000),
-            isPasswordProtected: settings.requirePassword,
-            totalChunks
-        };
-    }
-    sharedFiles[code].chunks[chunkIndex] = data;
-    localStorage.setItem('sharedFiles', JSON.stringify(sharedFiles));
-}
-
-async function receiveLargeFile(code, progressElement) {
-    try {
-        showProgress(progressElement, 0);
-        const sharedFile = getSharedFile(code);
-        if (!sharedFile || !sharedFile.chunks) {
-            showToast('Invalid code or file not found.', 'error');
-            return;
-        }
-
-        let key = code;
-        if (sharedFile.isPasswordProtected) {
-            key = prompt('This file is password-protected. Please enter the password:');
-            if (!key) {
-                showToast('Password is required to access this file.', 'error');
-                return;
-            }
-        }
-
-        const chunks = [];
-        for (let i = 0; i < sharedFile.totalChunks; i++) {
-            const encryptedChunk = sharedFile.chunks[i];
-            const decryptedChunk = decryptData(encryptedChunk, key);
-            const decompressedChunk = await decompressData(decryptedChunk);
-            chunks.push(decompressedChunk);
-            showProgress(progressElement, (i + 1) / sharedFile.totalChunks * 100);
-        }
-
-        const completeFile = new Blob(chunks, { type: sharedFile.fileType });
-        const url = URL.createObjectURL(completeFile);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = sharedFile.fileName;
-        link.click();
-        URL.revokeObjectURL(url);
-
-        showToast('Large file received and downloaded successfully.', 'success');
-        addToHistory('received', sharedFile.fileName, sharedFile.fileType, code);
-    } catch (error) {
-        console.error('Error receiving large file:', error);
-        showToast('An error occurred while receiving the large file.', 'error');
-    }
-}
-
-// Update the shareFile function to handle both regular and large files
-function shareFile(file, progressElement) {
-    if (file.size > CHUNK_SIZE) {
-        sharelargeFile(file, progressElement);
-    } else {
-        // Use the existing shareFile function for smaller files
-        wrapAsyncFunction(async () => {
-            // ... (previous shareFile code)
-        }, 'shareFile');
-    }
-}
-
-// Update the receiveFile function to handle both regular and large files
-function receiveFile(code, progressElement) {
-    const sharedFile = getSharedFile(code);
-    if (sharedFile && sharedFile.chunks) {
-        receiveLargeFile(code, progressElement);
-    } else {
-        // Use the existing receiveFile function for regular files
-        wrapAsyncFunction(async () => {
-            // ... (previous receiveFile code)
-        }, 'receiveFile');
-    }
-}
 
 // Initialize the app
 initApp();
