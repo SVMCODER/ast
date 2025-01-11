@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASTRIQUES</title>
-    <link rel="stylesheet" href="Style/body.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <title>OSTUXY - Offline File Sharing</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <div class="x" align="center">
-        <div class="div">
-            <img src="Image.png" alt="">
-            
+    <header>
+        <h1>OSTUXY</h1>
+    </header>
+    <main>
+        <div class="buttons">
+            <button id="shareBtn">Share</button>
+            <button id="receiveBtn">Receive</button>
         </div>
-        <div class="div">
-            <h1>ASTRIQUES</h1>
+        <div class="history">
+            <h2>Sent History</h2>
+            <ul id="sentHistory"></ul>
+            <h2>Received History</h2>
+            <ul id="receivedHistory"></ul>
         </div>
-        <div class="dd">
-            <input type="text" id="uname" placeholder="Username">
+    </main>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2>Share a File</h2>
+            <input type="file" id="fileInput">
+            <button id="sendBtn">Send</button>
         </div>
-        <div id="msg" style="text-align: left;padding-left: 20px;margin-top: 8px; font-size: 14px;"></div>
-    </div>   
-    <div class="x2" align="center"> 
-        <button onclick="login()">Log In</button>
-    </div>   
-    <script src="JS/app.js"></script>    
+    </div>
+    <script src="app.js"></script>
 </body>
+</html>
 
-</html> 
