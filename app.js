@@ -50,7 +50,7 @@ function shareFile() {
         reader.onload = function(event) {
             const base64 = event.target.result.split(',')[1];
             const code = generateCode(base64);
-            saveToHistory('sent', file.name, code);
+            saveToHistory('sent', file.name, code, file.type);
             modal.style.display = 'none';
             alert(`Your share code is: ${code}`);
         };
@@ -74,9 +74,9 @@ function receiveFile() {
 }
 
 // Save to history
-function saveToHistory(type, fileName, code) {
+function saveToHistory(type, fileName, code, fileType = '') {
     const history = JSON.parse(localStorage.getItem(type + 'History')) || [];
-    history.push({ fileName, code, timestamp: Date.now() });
+    history.push({ fileName, code, fileType, timestamp: Date.now() });
     localStorage.setItem(type + 'History', JSON.stringify(history));
     updateHistoryDisplay();
 }
@@ -99,8 +99,8 @@ function addHistoryItem(container, item) {
     li.innerHTML = `
         <span>${item.fileName} (${new Date(item.timestamp).toLocaleString()})</span>
         <div>
-            <button onclick="copyCode('${item.code}')">Copy Code</button>
-            <button onclick="downloadFile('${item.code}', '${item.fileName}')">Download</button>
+            <button onclick="copyCode('${item.code}')" class="ios-button">Copy Code</button>
+            <button onclick="downloadFile('${item.code}', '${item.fileName}', '${item.fileType}')" class="ios-button">Download</button>
         </div>
     `;
     container.appendChild(li);
@@ -114,13 +114,15 @@ function copyCode(code) {
 }
 
 // Download file
-function downloadFile(code, fileName) {
+function downloadFile(code, fileName, fileType) {
     try {
         const base64 = reverseCode(code);
         const link = document.createElement('a');
-        link.href = `data:application/octet-stream;base64,${base64}`;
+        link.href = `data:${fileType};base64,${base64}`;
         link.download = fileName;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     } catch (error) {
         alert('Error downloading file. Please try again.');
     }

@@ -5,28 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OSTUXY - Offline File Sharing</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>OSTUXY</h1>
-    </header>
-    <main>
-        <div class="buttons">
-            <button id="shareBtn">Share</button>
-            <button id="receiveBtn">Receive</button>
-        </div>
-        <div class="history">
-            <h2>Sent History</h2>
-            <ul id="sentHistory"></ul>
-            <h2>Received History</h2>
-            <ul id="receivedHistory"></ul>
-        </div>
-    </main>
+    <div class="container">
+        <header>
+            <h1>OSTUXY</h1>
+        </header>
+        <main>
+            <div class="buttons">
+                <button id="shareBtn" class="ios-button">Share</button>
+                <button id="receiveBtn" class="ios-button">Receive</button>
+            </div>
+            <div class="history">
+                <h2>Sent Files</h2>
+                <ul id="sentHistory" class="history-list"></ul>
+                <h2>Received Files</h2>
+                <ul id="receivedHistory" class="history-list"></ul>
+            </div>
+        </main>
+    </div>
     <div id="modal" class="modal">
         <div class="modal-content">
             <h2>Share a File</h2>
-            <input type="file" id="fileInput">
-            <button id="sendBtn">Send</button>
+            <input type="file" id="fileInput" class="ios-input">
+            <button id="sendBtn" class="ios-button">Send</button>
         </div>
     </div>
     <script src="app.js"></script>
